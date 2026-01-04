@@ -54,17 +54,6 @@ public class GamesListFragment extends Fragment {
 
     // Cache for storing page data
     private Map<Integer, GameResponse> pageCache = new HashMap<>();
-
-
-
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
     private View mView;
     private List<Game> mGames;
 
@@ -84,8 +73,6 @@ public class GamesListFragment extends Fragment {
     public static GamesListFragment newInstance(String param1, String param2) {
         GamesListFragment fragment = new GamesListFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
         fragment.setArguments(args);
         return fragment;
     }
@@ -93,10 +80,6 @@ public class GamesListFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
     }
 
     @Override
@@ -105,7 +88,7 @@ public class GamesListFragment extends Fragment {
         // Inflate the layout for this fragment
         mView =  inflater.inflate(R.layout.fragment_games_list, container, false);
 
-        dataSet = new ArrayList<>();
+        //dataSet = new ArrayList<>();
         recyclerView = mView.findViewById(R.id.gamesListView);
         layoutManager = new LinearLayoutManager(requireContext());
         recyclerView.setLayoutManager(layoutManager);
@@ -145,7 +128,8 @@ public class GamesListFragment extends Fragment {
         }
         //setAdapter to the recycler view
     }
-
+    //The function checks if we have already have the desired page games , if we do display them
+    //otherwise , we need to call the api
     private void fetchGames(int page) {
         // Check cache first
         if (pageCache.containsKey(page)) {
@@ -163,7 +147,7 @@ public class GamesListFragment extends Fragment {
                 .build();
         //connect retrofit to the service
         GameApiService service = retrofit.create(GameApiService.class);
-
+        //call the route with the page as parameter
         Call<GameResponse> call = service.getAllGames(page);
 
         //call async func
@@ -196,6 +180,7 @@ public class GamesListFragment extends Fragment {
     }
 
     private void loadFromCache(int page) {
+        //get the saved response and display the games
         GameResponse gameResponse = pageCache.get(page);
         if (gameResponse != null) {
             displayGames(gameResponse);

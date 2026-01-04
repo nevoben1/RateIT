@@ -36,12 +36,6 @@ import android.widget.VideoView;
  */
 public class GameDetailsFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
     private String gameName, gameReleaseDate, gameRating, gameGenre,
             gameImage, gameesrbRating, gameTrailer , gameID;
 
@@ -52,26 +46,13 @@ public class GameDetailsFragment extends Fragment {
 
     private VideoView mVideoView;
 
-
-
     public GameDetailsFragment() {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment GameDetailsFragment.
-     */
-    // TODO: Rename and change types and number of parameters
     public static GameDetailsFragment newInstance(String param1, String param2) {
         GameDetailsFragment fragment = new GameDetailsFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
         fragment.setArguments(args);
         return fragment;
     }
@@ -79,6 +60,7 @@ public class GameDetailsFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //get all the data passed from the gameList fragment
         if (getArguments() != null) {
             gameName = getArguments().getString("game_name");
             gameReleaseDate = getArguments().getString("game_releaseDate");
@@ -112,20 +94,23 @@ public class GameDetailsFragment extends Fragment {
                     TrailerObj trailerObj = response.body().getResults();
                     if(trailerObj != null )
                     {
+                        //try get the max quality trailer
                         gameTrailer = trailerObj.getData().getMaxQuality();
                         if(gameTrailer == null){
+                            //if we can not find the max quality try to get the min quality
                             gameTrailer = trailerObj.getData().getLowQuality();
                         }
                     }
+                    //only if we found a trailer display it otherwise display a toast
                     if(gameTrailer != null && !gameTrailer.isEmpty()){
                         MediaController mediaController = new MediaController(requireContext());
                         mediaController.setAnchorView(mVideoView);
                         mVideoView.setMediaController(mediaController);
 
-// Set the video URI
+                        // Set the video URI
                         mVideoView.setVideoURI(Uri.parse(gameTrailer));
 
-// Optional: Auto-play when ready
+                        //Auto-play when ready
                         mVideoView.setOnPreparedListener(mp -> {
                             mp.start();
                         });
@@ -152,7 +137,6 @@ public class GameDetailsFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_game_details, container, false);
-
         // Initialize views
         gameDetailImage = view.findViewById(R.id.gameDetailImage);
         gameDetailName = view.findViewById(R.id.gameDetailName);
@@ -161,7 +145,6 @@ public class GameDetailsFragment extends Fragment {
         gameDetailGenre = view.findViewById(R.id.gameDetailGenre);
         gameDetailEsrbRating = view.findViewById(R.id.gameDetailEsrbRating);
         mVideoView = view.findViewById(R.id.gameDetailVideoView);
-        //gameDetailTrailerButton = view.findViewById(R.id.gameDetailTrailerButton);
 
         // Set data
         gameDetailName.setText(gameName);
