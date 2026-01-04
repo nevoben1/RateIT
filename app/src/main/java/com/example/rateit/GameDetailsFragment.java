@@ -130,6 +130,10 @@ public class GameDetailsFragment extends Fragment {
                             mp.start();
                         });
                     }
+                    else{
+                        Toast.makeText(getContext() , "no trailer found" , Toast.LENGTH_SHORT).show();
+
+                    }
                 } else {
                     Log.d("result", "Response code: " + response.code());
                     Log.d("result", "Response message: " + response.message());
