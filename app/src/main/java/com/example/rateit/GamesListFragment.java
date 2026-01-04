@@ -12,9 +12,13 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -39,6 +43,17 @@ public class GamesListFragment extends Fragment {
     private LinearLayoutManager layoutManager;
     private CustomeAdapter adapter;
     public static final String BASE = "https://api.rawg.io/api/";
+
+    // Pagination variables
+    private int currentPage = 1;
+    private String nextPageUrl = null;
+    private String previousPageUrl = null;
+    private Button btnPrevious;
+    private Button btnNext;
+    private TextView tvPageInfo;
+
+    // Cache for storing page data
+    private Map<Integer, GameResponse> pageCache = new HashMap<>();
 
 
 
@@ -96,7 +111,29 @@ public class GamesListFragment extends Fragment {
         recyclerView.setLayoutManager(layoutManager);
         //set default state for the lists
         recyclerView.setItemAnimator(new DefaultItemAnimator());
-        fetchGames();
+
+        // Initialize pagination controls
+        btnPrevious = mView.findViewById(R.id.btnPrevious);
+        btnNext = mView.findViewById(R.id.btnNext);
+        tvPageInfo = mView.findViewById(R.id.tvPageInfo);
+
+        // Set up button click listeners
+        btnPrevious.setOnClickListener(v -> {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchGames(currentPage);
+            }
+        });
+
+        btnNext.setOnClickListener(v -> {
+            if (nextPageUrl != null) {
+                currentPage++;
+                fetchGames(currentPage);
+            }
+        });
+
+        // Load first page
+        fetchGames(currentPage);
 
         return mView;
     }
@@ -109,7 +146,17 @@ public class GamesListFragment extends Fragment {
         //setAdapter to the recycler view
     }
 
-    private void fetchGames() {
+    private void fetchGames(int page) {
+        // Check cache first
+        if (pageCache.containsKey(page)) {
+            Log.d("result", "Loading page " + page + " from cache");
+            loadFromCache(page);
+            return;
+        }
+
+        // Cache miss - fetch from API
+        Log.d("result", "Fetching page " + page + " from API");
+
         //init retrofit
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE).addConverterFactory(GsonConverterFactory.create())
@@ -117,34 +164,22 @@ public class GamesListFragment extends Fragment {
         //connect retrofit to the service
         GameApiService service = retrofit.create(GameApiService.class);
 
-        Call<GameResponse> call = service.getAllGames();
+        Call<GameResponse> call = service.getAllGames(page);
 
         //call async func
         call.enqueue(new Callback<GameResponse>() {
             @Override
             public void onResponse(Call<GameResponse> call, Response<GameResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    mGames = response.body().getResults();
+                    GameResponse gameResponse = response.body();
 
-                    adapter = new CustomeAdapter(mGames);
-                    adapter.setOnItemClickListener((data, position) -> {
-                        //Navigate to the same fragment for all items
+                    // Cache the response
+                    pageCache.put(page, gameResponse);
 
-                        //Bundle is an object which contains keyValue pairs of data , the bundle will be passed to the next fragment
-                        Bundle bundle = new Bundle();
-                        bundle.putString("game_name", data.getName() + "");
-                        bundle.putString("game_genre", data.getGenres());
-                        bundle.putString("game_image", data.getImageUrl());
-                        bundle.putString("game_releaseDate", data.getReleaseDate());
-                        bundle.putString("game_trailer", data.getTrailerUrl());
-                        bundle.putString("game_esrbRating", data.getEsrbRating());
-                        bundle.putString("game_rating" , data.getRating()+"");
-                        bundle.putString("game_id"  , data.getID());
-                        Navigation.findNavController(mView).navigate(R.id.action_gamesListFragment_to_gameDetailsFragment, bundle);
-                    });
-                    recyclerView.setAdapter(adapter);
+                    // Display the data
+                    displayGames(gameResponse);
 
-                    Log.d("result", "Games loaded: " + mGames.size());
+                    Log.d("result", "Games loaded from API: " + gameResponse.getResults().size() + " (Page " + currentPage + ")");
                 } else {
                     Log.d("result", "Response code: " + response.code());
                     Log.d("result", "Response message: " + response.message());
@@ -158,5 +193,55 @@ public class GamesListFragment extends Fragment {
             }
         });
 
+    }
+
+    private void loadFromCache(int page) {
+        GameResponse gameResponse = pageCache.get(page);
+        if (gameResponse != null) {
+            displayGames(gameResponse);
+        }
+    }
+
+    private void displayGames(GameResponse gameResponse) {
+        mGames = gameResponse.getResults();
+
+        // Update pagination state
+        nextPageUrl = gameResponse.getNext();
+        previousPageUrl = gameResponse.getPrevious();
+
+        // Update UI
+        updatePaginationControls();
+
+        adapter = new CustomeAdapter(mGames);
+        adapter.setOnItemClickListener((data, position) -> {
+            //Navigate to the same fragment for all items
+
+            //Bundle is an object which contains keyValue pairs of data , the bundle will be passed to the next fragment
+            Bundle bundle = new Bundle();
+            bundle.putString("game_name", data.getName() + "");
+            bundle.putString("game_genre", data.getGenres());
+            bundle.putString("game_image", data.getImageUrl());
+            bundle.putString("game_releaseDate", data.getReleaseDate());
+            bundle.putString("game_trailer", data.getTrailerUrl());
+            bundle.putString("game_esrbRating", data.getEsrbRating());
+            bundle.putString("game_rating" , data.getRating()+"");
+            bundle.putString("game_id"  , data.getID());
+            Navigation.findNavController(mView).navigate(R.id.action_gamesListFragment_to_gameDetailsFragment, bundle);
+        });
+        recyclerView.setAdapter(adapter);
+
+        // Scroll to top when page changes
+        recyclerView.scrollToPosition(0);
+    }
+
+    private void updatePaginationControls() {
+        // Update page info text
+        tvPageInfo.setText("Page " + currentPage);
+
+        // Enable/disable Previous button
+        btnPrevious.setEnabled(currentPage > 1);
+
+        // Enable/disable Next button
+        btnNext.setEnabled(nextPageUrl != null);
     }
 }
