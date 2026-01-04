@@ -75,7 +75,7 @@ public class Game {
     public String getReleaseDate() {
         return RELEASE_DATE;
     }
-
+    //some games dont have esrb rating , we should handle that
     public String getEsrbRating() {
         return ESRB_RATING != null ? ESRB_RATING.getName() : "none";
     }
