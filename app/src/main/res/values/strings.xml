@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">RateIT</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="game_cover">Game cover image</string>
+    <string name="rating_icon">Rating star</string>
+</resources>
