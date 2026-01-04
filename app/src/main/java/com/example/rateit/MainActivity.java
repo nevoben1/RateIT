@@ -73,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             readDB();
                             writeToDb();
-                            Toast.makeText(MainActivity.this , "register ok" , Toast.LENGTH_LONG).show();
+                            Toast.makeText(MainActivity.this , "register ok" , Toast.LENGTH_SHORT).show();
 
                             NavController navController = Navigation.findNavController(MainActivity.this , R.id.fragmentContainerView);
                             navController.navigate(R.id.action_registerFragment_to_loginFragment);
