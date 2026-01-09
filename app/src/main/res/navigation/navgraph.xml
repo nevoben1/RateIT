@@ -33,10 +33,22 @@
         <action
             android:id="@+id/action_gamesListFragment_to_gameDetailsFragment"
             app:destination="@id/gameDetailsFragment" />
+        <action
+            android:id="@+id/action_gamesListFragment_to_filtesrFragment"
+            app:destination="@id/filtesrFragment" />
     </fragment>
     <fragment
         android:id="@+id/gameDetailsFragment"
         android:name="com.example.rateit.GameDetailsFragment"
         android:label="fragment_game_details"
         tools:layout="@layout/fragment_game_details" />
+    <fragment
+        android:id="@+id/filtesrFragment"
+        android:name="com.example.rateit.FiltesrFragment"
+        android:label="fragment_filtesr"
+        tools:layout="@layout/fragment_filtesr" >
+        <action
+            android:id="@+id/action_filtesrFragment_to_gamesListFragment"
+            app:destination="@id/gamesListFragment" />
+    </fragment>
 </navigation>

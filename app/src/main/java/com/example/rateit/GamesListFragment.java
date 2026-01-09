@@ -50,12 +50,19 @@ public class GamesListFragment extends Fragment {
     private String previousPageUrl = null;
     private Button btnPrevious;
     private Button btnNext;
+    private Button btnFilter;
     private TextView tvPageInfo;
 
     // Cache for storing page data
     private Map<Integer, GameResponse> pageCache = new HashMap<>();
     private View mView;
     private List<Game> mGames;
+
+    // Filter parameters
+    private String filterCategory = "All Categories";
+    private String filterStartYear = "";
+    private String filterEndYear = "";
+    private boolean filterFavoritesOnly = false;
 
     public GamesListFragment() {
         // Required empty public constructor
@@ -98,7 +105,16 @@ public class GamesListFragment extends Fragment {
         // Initialize pagination controls
         btnPrevious = mView.findViewById(R.id.btnPrevious);
         btnNext = mView.findViewById(R.id.btnNext);
+        btnFilter = mView.findViewById(R.id.btnFilter);
         tvPageInfo = mView.findViewById(R.id.tvPageInfo);
+
+        // Get filter parameters from arguments (when returning from filter fragment)
+        if (getArguments() != null) {
+            filterCategory = getArguments().getString("category", "All Categories");
+            filterStartYear = getArguments().getString("startYear", "");
+            filterEndYear = getArguments().getString("endYear", "");
+            filterFavoritesOnly = getArguments().getBoolean("favoritesOnly", false);
+        }
 
         // Set up button click listeners
         btnPrevious.setOnClickListener(v -> {
@@ -115,18 +131,67 @@ public class GamesListFragment extends Fragment {
             }
         });
 
+        btnFilter.setOnClickListener(v -> {
+            // Navigate to filter fragment
+            Navigation.findNavController(mView).navigate(R.id.action_gamesListFragment_to_filtesrFragment);
+        });
+
         // Load first page
         fetchGames(currentPage);
 
         return mView;
     }
 
-    private void filterGames(){
-        List<Game> preFilter  = List.copyOf(mGames);
-        for (Game game:preFilter) {
-            //if game doesnt match the filter , remove
+    private List<Game> filterGames(List<Game> games){
+        List<Game> filteredGames = new ArrayList<>();
+
+        for (Game game : games) {
+            // Check category filter
+            if (!filterCategory.equals("All Categories")) {
+                String gameGenre = game.getGenres();
+                if (gameGenre == null || !gameGenre.toLowerCase().contains(filterCategory.toLowerCase())) {
+                    continue;
+                }
+            }
+
+            // Check year range filter
+            if (!filterStartYear.isEmpty() || !filterEndYear.isEmpty()) {
+                String releaseDate = game.getReleaseDate();
+                if (releaseDate != null && !releaseDate.isEmpty()) {
+                    try {
+                        int gameYear = Integer.parseInt(releaseDate.substring(0, 4));
+
+                        if (!filterStartYear.isEmpty()) {
+                            int startYear = Integer.parseInt(filterStartYear);
+                            if (gameYear < startYear) {
+                                continue;
+                            }
+                        }
+
+                        if (!filterEndYear.isEmpty()) {
+                            int endYear = Integer.parseInt(filterEndYear);
+                            if (gameYear > endYear) {
+                                continue;
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Skip games with invalid dates
+                        continue;
+                    }
+                }
+            }
+
+            // If favorites filter is enabled, skip for now
+            // (This would require a favorites database/storage mechanism)
+            if (filterFavoritesOnly) {
+                // TODO: Implement favorites checking
+                // For now, include all games
+            }
+
+            filteredGames.add(game);
         }
-        //setAdapter to the recycler view
+
+        return filteredGames;
     }
     //The function checks if we have already have the desired page games , if we do display them
     //otherwise , we need to call the api
@@ -190,6 +255,9 @@ public class GamesListFragment extends Fragment {
     private void displayGames(GameResponse gameResponse) {
         mGames = gameResponse.getResults();
 
+        // Apply filters to the games list
+        List<Game> filteredGames = filterGames(mGames);
+
         // Update pagination state
         nextPageUrl = gameResponse.getNext();
         previousPageUrl = gameResponse.getPrevious();
@@ -197,7 +265,7 @@ public class GamesListFragment extends Fragment {
         // Update UI
         updatePaginationControls();
 
-        adapter = new CustomeAdapter(mGames);
+        adapter = new CustomeAdapter(filteredGames);
         adapter.setOnItemClickListener((data, position) -> {
             //Navigate to the same fragment for all items
 
