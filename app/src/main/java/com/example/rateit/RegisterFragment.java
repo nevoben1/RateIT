@@ -68,7 +68,8 @@ public class RegisterFragment extends Fragment {
             public void onClick(View v) {
                 //this is the register button we should call the register activity from here
                 MainActivity mainActivity = (MainActivity) getActivity();
-                mainActivity.register();
+                mainActivity.readDB();
+                mainActivity.writeToDb();
             }
         });
 

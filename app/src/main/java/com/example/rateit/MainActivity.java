@@ -23,6 +23,9 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.nio.charset.StandardCharsets;
+import android.util.Base64;
+
 public class MainActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
@@ -71,17 +74,21 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
-                            readDB();
-                            writeToDb();
                             Toast.makeText(MainActivity.this , "register ok" , Toast.LENGTH_SHORT).show();
 
                             NavController navController = Navigation.findNavController(MainActivity.this , R.id.fragmentContainerView);
                             navController.navigate(R.id.action_registerFragment_to_loginFragment);
-                        } else {
-
+                        }
+                        else {
+                            Toast.makeText(MainActivity.this , "register failed" , Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
+    }
+
+    public void addFavByUser()
+    {
+
     }
 
     public void writeToDb(){
@@ -91,17 +98,32 @@ public class MainActivity extends AppCompatActivity {
         String id = ((EditText)findViewById(R.id.registerIDView)).getText().toString();
         String email = ((EditText)findViewById(R.id.registerEmailText)).getText().toString();
         String phone = ((EditText)findViewById(R.id.registerPhoneView)).getText().toString();
+
         //go to the directory listed below if doesnt exist it will be created
         DatabaseReference myRef = database.getReference("users").child(id);
         User user = new User(id , phone , email);
         //pass the object to the function it will be added to the db
-        myRef.setValue(user);
+        myRef.setValue(user).addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if(task.isSuccessful())
+                {
+                    register();
+                    //Toast.makeText(MainActivity.this , "register ok" , Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    Toast.makeText(MainActivity.this , "failed to create user" , Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     public void readDB(){
+        String id = ((EditText)findViewById(R.id.registerIDView)).getText().toString();
+
         FirebaseDatabase database = FirebaseDatabase.getInstance();
         // Read from the database
-        DatabaseReference myRef = database.getReference("users").child("2222");
+        DatabaseReference myRef = database.getReference("users").child(id);
 
         myRef.addValueEventListener(new ValueEventListener() {
             @Override
