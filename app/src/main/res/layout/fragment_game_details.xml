@@ -134,6 +134,26 @@
                 android:textColor="@android:color/darker_gray"
                 tools:text="Mature 17+" />
 
+            <!-- Description Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Description"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black" />
+
+            <TextView
+                android:id="@+id/gameDetailDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Game description will appear here"
+                android:textSize="14sp"
+                android:textColor="@android:color/darker_gray"
+                tools:text="An epic adventure game with stunning graphics and immersive gameplay." />
+
             <!-- Trailer Section -->
             <TextView
                 android:layout_width="match_parent"

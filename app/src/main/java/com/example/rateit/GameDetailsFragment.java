@@ -41,7 +41,7 @@ public class GameDetailsFragment extends Fragment {
 
     private ImageView gameDetailImage;
     private TextView gameDetailName, gameDetailRating, gameDetailReleaseDate,
-            gameDetailGenre, gameDetailEsrbRating;
+            gameDetailGenre, gameDetailEsrbRating, gameDetailDescription;
     private Button gameDetailTrailerButton;
 
     private VideoView mVideoView;
@@ -74,6 +74,7 @@ public class GameDetailsFragment extends Fragment {
         }
 
         fetchVideos();
+        fetchDescription();
     }
 
     private void fetchVideos() {
@@ -133,6 +134,46 @@ public class GameDetailsFragment extends Fragment {
         });
     }
 
+    private void fetchDescription() {
+        //init retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(GamesListFragment.BASE).addConverterFactory(GsonConverterFactory.create())
+                .build();
+        //connect retrofit to the service
+        GameApiService service = retrofit.create(GameApiService.class);
+
+        Call<GameDetailsResponse> call = service.getDescription(gameID);
+
+        //call async func
+        call.enqueue(new Callback<GameDetailsResponse>() {
+            @Override
+            public void onResponse(Call<GameDetailsResponse> call, Response<GameDetailsResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    GameDetailsResponse gameDetails = response.body();
+                    String description = gameDetails.getDescriptionRaw();
+
+                    // Update the description TextView if it's initialized and description is not null
+                    if (gameDetailDescription != null && description != null && !description.isEmpty()) {
+                        gameDetailDescription.setText(description);
+                    } else if (gameDetailDescription != null) {
+                        gameDetailDescription.setText("No description available");
+                    }
+                } else {
+                    Log.d("result", "Response code: " + response.code());
+                    Log.d("result", "Response message: " + response.message());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<GameDetailsResponse> call, Throwable t) {
+                Log.d("result", "API call failed " + t.getMessage());
+                if (gameDetailDescription != null) {
+                    gameDetailDescription.setText("Failed to load description");
+                }
+            }
+        });
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -144,6 +185,7 @@ public class GameDetailsFragment extends Fragment {
         gameDetailReleaseDate = view.findViewById(R.id.gameDetailReleaseDate);
         gameDetailGenre = view.findViewById(R.id.gameDetailGenre);
         gameDetailEsrbRating = view.findViewById(R.id.gameDetailEsrbRating);
+        gameDetailDescription = view.findViewById(R.id.gameDetailDescription);
         mVideoView = view.findViewById(R.id.gameDetailVideoView);
 
         // Set data

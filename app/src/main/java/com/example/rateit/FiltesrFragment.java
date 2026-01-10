@@ -5,6 +5,7 @@ import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +15,9 @@ import android.widget.EditText;
 import android.widget.Spinner;
 
 import androidx.appcompat.widget.SwitchCompat;
+
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * A fragment for filtering games by category, year range, and favorites.
@@ -77,30 +81,71 @@ public class FiltesrFragment extends Fragment {
     }
 
     private void setupCategorySpinner() {
-        // Define categories for games
-        String[] categories = {
-                "All Categories",
-                "Action",
-                "Adventure",
-                "RPG",
-                "Strategy",
-                "Shooter",
-                "Sports",
-                "Racing",
-                "Puzzle",
-                "Simulation",
-                "Platformer",
-                "Fighting",
-                "Indie"
-        };
 
-        // Create adapter for spinner
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                requireContext(),
-                android.R.layout.simple_spinner_item,
-                categories
-        );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerCategory.setAdapter(adapter);
+        //init retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(GamesListFragment.BASE).addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        //connect retrofit to the service
+        GameApiService service = retrofit.create(GameApiService.class);
+
+        // Fetch genres from API
+        service.getGenres().enqueue(new retrofit2.Callback<GenresResponse>() {
+            @Override
+            public void onResponse(retrofit2.Call<GenresResponse> call, retrofit2.Response<GenresResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Log.d("result", "got answer from the server");
+
+                    GenresResponse genresResponse = response.body();
+
+                    // Create categories array with "All Categories" as first item
+                    java.util.ArrayList<String> categoriesList = new java.util.ArrayList<>();
+                    categoriesList.add("All Categories");
+
+                    // Add genre names from API response
+                    for (Genre genre : genresResponse.getResults()) {
+                        categoriesList.add(genre.getName());
+                    }
+
+                    // Create adapter for spinner
+                    ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                            requireContext(),
+                            android.R.layout.simple_spinner_item,
+                            categoriesList
+                    );
+                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    spinnerCategory.setAdapter(adapter);
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<GenresResponse> call, Throwable t) {
+                // If API call fails, use fallback categories
+                String[] fallbackCategories = {
+                        "All Categories",
+                        "Action",
+                        "Adventure",
+                        "RPG",
+                        "Strategy",
+                        "Shooter",
+                        "Sports",
+                        "Racing",
+                        "Puzzle",
+                        "Simulation",
+                        "Platformer",
+                        "Fighting",
+                        "Indie"
+                };
+
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                        requireContext(),
+                        android.R.layout.simple_spinner_item,
+                        fallbackCategories
+                );
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinnerCategory.setAdapter(adapter);
+            }
+        });
     }
 }

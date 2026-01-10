@@ -8,11 +8,15 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -53,6 +57,11 @@ public class GamesListFragment extends Fragment {
     private Button btnFilter;
     private TextView tvPageInfo;
 
+    // Search variables
+    private EditText etSearch;
+    private ImageButton btnClearSearch;
+    private String searchText = "";
+
     // Cache for storing page data
     private Map<Integer, GameResponse> pageCache = new HashMap<>();
     private View mView;
@@ -63,6 +72,9 @@ public class GamesListFragment extends Fragment {
     private String filterStartYear = "";
     private String filterEndYear = "";
     private boolean filterFavoritesOnly = false;
+
+    // Favorites tracking
+    private java.util.Set<String> favoritedGameIds = new java.util.HashSet<>();
 
     public GamesListFragment() {
         // Required empty public constructor
@@ -108,6 +120,10 @@ public class GamesListFragment extends Fragment {
         btnFilter = mView.findViewById(R.id.btnFilter);
         tvPageInfo = mView.findViewById(R.id.tvPageInfo);
 
+        // Initialize search controls
+        etSearch = mView.findViewById(R.id.etSearch);
+        btnClearSearch = mView.findViewById(R.id.btnClearSearch);
+
         // Get filter parameters from arguments (when returning from filter fragment)
         if (getArguments() != null) {
             filterCategory = getArguments().getString("category", "All Categories");
@@ -136,16 +152,109 @@ public class GamesListFragment extends Fragment {
             Navigation.findNavController(mView).navigate(R.id.action_gamesListFragment_to_filtesrFragment);
         });
 
+        // Set up search functionality
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchText = s.toString();
+                // Show/hide clear button based on text
+                btnClearSearch.setVisibility(searchText.isEmpty() ? View.GONE : View.VISIBLE);
+                // Re-filter the current games list
+                if (mGames != null) {
+                    applyFiltersAndDisplay();
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        // Set up clear search button
+        btnClearSearch.setOnClickListener(v -> {
+            etSearch.setText("");
+        });
+
+        // Load favorites from Firebase
+        loadFavorites();
+
         // Load first page
         fetchGames(currentPage);
 
         return mView;
     }
 
+    private void loadFavorites() {
+        MainActivity mainActivity = (MainActivity) getActivity();
+        if (mainActivity != null) {
+            mainActivity.loadUserFavorites(favoriteIds -> {
+                favoritedGameIds = favoriteIds;
+                // Update adapter if it's already created
+                if (adapter != null) {
+                    adapter.setFavoritedGames(favoriteIds);
+                }
+            });
+        }
+    }
+
+    private void applyFiltersAndDisplay() {
+        if (mGames == null) {
+            return;
+        }
+
+        // Apply filters to the games list
+        List<Game> filteredGames = filterGames(mGames);
+
+        // Update adapter with filtered games
+        adapter = new CustomeAdapter(filteredGames);
+
+        // Set favorited games
+        adapter.setFavoritedGames(favoritedGameIds);
+
+        // Set favorite click listener
+        adapter.setOnFavoriteClickListener((game, isFavorited) -> {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            if (mainActivity != null) {
+                if (isFavorited) {
+                    mainActivity.addFavByUser(game.getID(), game.getName(), game.getImageUrl());
+                } else {
+                    mainActivity.removeFavByUser(game.getID());
+                }
+            }
+        });
+
+        adapter.setOnItemClickListener((data, position) -> {
+            Bundle bundle = new Bundle();
+            bundle.putString("game_name", data.getName() + "");
+            bundle.putString("game_genre", data.getGenres());
+            bundle.putString("game_image", data.getImageUrl());
+            bundle.putString("game_releaseDate", data.getReleaseDate());
+            bundle.putString("game_trailer", data.getTrailerUrl());
+            bundle.putString("game_esrbRating", data.getEsrbRating());
+            bundle.putString("game_rating" , data.getRating()+"");
+            bundle.putString("game_id"  , data.getID());
+            Navigation.findNavController(mView).navigate(R.id.action_gamesListFragment_to_gameDetailsFragment, bundle);
+        });
+
+        recyclerView.setAdapter(adapter);
+    }
+
     private List<Game> filterGames(List<Game> games){
         List<Game> filteredGames = new ArrayList<>();
 
         for (Game game : games) {
+            // Check search text filter
+            if (!searchText.isEmpty()) {
+                String gameName = game.getName();
+                if (gameName == null || !gameName.toLowerCase().contains(searchText.toLowerCase())) {
+                    continue;
+                }
+            }
+
             // Check category filter
             if (!filterCategory.equals("All Categories")) {
                 String gameGenre = game.getGenres();
@@ -181,11 +290,12 @@ public class GamesListFragment extends Fragment {
                 }
             }
 
-            // If favorites filter is enabled, skip for now
-            // (This would require a favorites database/storage mechanism)
+            // Check favorites filter
             if (filterFavoritesOnly) {
-                // TODO: Implement favorites checking
-                // For now, include all games
+                String gameId = game.getID();
+                if (gameId == null || !favoritedGameIds.contains(gameId)) {
+                    continue;
+                }
             }
 
             filteredGames.add(game);
@@ -266,6 +376,22 @@ public class GamesListFragment extends Fragment {
         updatePaginationControls();
 
         adapter = new CustomeAdapter(filteredGames);
+
+        // Set favorited games
+        adapter.setFavoritedGames(favoritedGameIds);
+
+        // Set favorite click listener
+        adapter.setOnFavoriteClickListener((game, isFavorited) -> {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            if (mainActivity != null) {
+                if (isFavorited) {
+                    mainActivity.addFavByUser(game.getID(), game.getName(), game.getImageUrl());
+                } else {
+                    mainActivity.removeFavByUser(game.getID());
+                }
+            }
+        });
+
         adapter.setOnItemClickListener((data, position) -> {
             //Navigate to the same fragment for all items
 

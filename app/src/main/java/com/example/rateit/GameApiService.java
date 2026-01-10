@@ -16,4 +16,11 @@ public interface GameApiService {
     //we would like to see if there is trailer for it
     @GET("games/{gameId}/movies?key=219ef37506bd4d06b40222e162377cb4")
     Call<TrailersResponse> getTrailers(@Path("gameId") String gameId);
+
+    @GET("genres?key=219ef37506bd4d06b40222e162377cb4")
+    Call<GenresResponse> getGenres();
+
+    @GET("games/{gameId}?key=219ef37506bd4d06b40222e162377cb4")
+    Call<GameDetailsResponse> getDescription(@Path("gameId") String gameId);
+
 }
