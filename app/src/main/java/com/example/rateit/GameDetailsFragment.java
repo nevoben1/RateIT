@@ -13,12 +13,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -36,15 +39,19 @@ import android.widget.VideoView;
  */
 public class GameDetailsFragment extends Fragment {
 
+    // Static cache for descriptions to persist across fragment instances
+    private static Map<String, String> descriptionCache = new HashMap<>();
+
     private String gameName, gameReleaseDate, gameRating, gameGenre,
             gameImage, gameesrbRating, gameTrailer , gameID;
 
     private ImageView gameDetailImage;
     private TextView gameDetailName, gameDetailRating, gameDetailReleaseDate,
-            gameDetailGenre, gameDetailEsrbRating;
+            gameDetailGenre, gameDetailEsrbRating, gameDetailDescription;
     private Button gameDetailTrailerButton;
 
     private VideoView mVideoView;
+    private ScrollView scrollView;
 
     public GameDetailsFragment() {
         // Required empty public constructor
@@ -133,18 +140,85 @@ public class GameDetailsFragment extends Fragment {
         });
     }
 
+    private void fetchDescription() {
+        // Check cache first
+        if (descriptionCache.containsKey(gameID)) {
+            Log.d("result", "Loading description from cache for game: " + gameID);
+            String cachedDescription = descriptionCache.get(gameID);
+            if (gameDetailDescription != null) {
+                gameDetailDescription.setText(cachedDescription);
+            }
+            return;
+        }
+
+        // Cache miss - fetch from API
+        Log.d("result", "Fetching description from API for game: " + gameID);
+
+        //init retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(GamesListFragment.BASE).addConverterFactory(GsonConverterFactory.create())
+                .build();
+        //connect retrofit to the service
+        GameApiService service = retrofit.create(GameApiService.class);
+
+        Call<GameDetailsResponse> call = service.getDescription(gameID);
+
+        //call async func
+        call.enqueue(new Callback<GameDetailsResponse>() {
+            @Override
+            public void onResponse(Call<GameDetailsResponse> call, Response<GameDetailsResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    GameDetailsResponse gameDetails = response.body();
+                    String description = gameDetails.getDescriptionRaw();
+
+                    // Determine the final description text
+                    String finalDescription;
+                    if (description != null && !description.isEmpty()) {
+                        finalDescription = description;
+                    } else {
+                        finalDescription = "No description available";
+                    }
+
+                    // Cache the description
+                    descriptionCache.put(gameID, finalDescription);
+
+                    // Update the description TextView if it's initialized
+                    if (gameDetailDescription != null) {
+                        gameDetailDescription.setText(finalDescription);
+                    }
+                } else {
+                    Log.d("result", "Response code: " + response.code());
+                    Log.d("result", "Response message: " + response.message());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<GameDetailsResponse> call, Throwable t) {
+                Log.d("result", "API call failed " + t.getMessage());
+                if (gameDetailDescription != null) {
+                    gameDetailDescription.setText("Failed to load description");
+                }
+            }
+        });
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_game_details, container, false);
         // Initialize views
+        scrollView = view.findViewById(R.id.gameDetailsScrollView);
         gameDetailImage = view.findViewById(R.id.gameDetailImage);
         gameDetailName = view.findViewById(R.id.gameDetailName);
         gameDetailRating = view.findViewById(R.id.gameDetailRating);
         gameDetailReleaseDate = view.findViewById(R.id.gameDetailReleaseDate);
         gameDetailGenre = view.findViewById(R.id.gameDetailGenre);
         gameDetailEsrbRating = view.findViewById(R.id.gameDetailEsrbRating);
+        gameDetailDescription = view.findViewById(R.id.gameDetailDescription);
         mVideoView = view.findViewById(R.id.gameDetailVideoView);
+
+        // Scroll to top when fragment is created
+        scrollView.post(() -> scrollView.scrollTo(0, 0));
 
         // Set data
         gameDetailName.setText(gameName);
@@ -157,6 +231,9 @@ public class GameDetailsFragment extends Fragment {
         Glide.with(this)
                 .load(gameImage)
                 .into(gameDetailImage);
+
+        // Fetch description after views are initialized
+        fetchDescription();
 
         return view;
     }

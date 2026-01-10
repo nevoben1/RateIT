@@ -3,6 +3,7 @@ package com.example.rateit;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -14,13 +15,18 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CustomeAdapter extends RecyclerView.Adapter<CustomeAdapter.MyViewHolder> {
 
     private List<Game> arr;
     //create an OnClick listener
     private OnItemClickListener listener;
+    private OnFavoriteClickListener favoriteListener;
+    // Set to track which games are favorited
+    private Set<String> favoritedGameIds = new HashSet<>();
 
     public CustomeAdapter(List<Game> arr) {
 
@@ -34,6 +40,7 @@ public class CustomeAdapter extends RecyclerView.Adapter<CustomeAdapter.MyViewHo
         TextView releaseDateText;
         TextView rateText;
         ImageView imageView;
+        ImageButton favoriteButton;
 
         public MyViewHolder ( View itemView){
             super(itemView);
@@ -42,6 +49,7 @@ public class CustomeAdapter extends RecyclerView.Adapter<CustomeAdapter.MyViewHo
             releaseDateText = itemView.findViewById(R.id.releaseDateText);
             rateText = itemView.findViewById(R.id.rateText);
             imageView = itemView.findViewById(R.id.imageView);
+            favoriteButton = itemView.findViewById(R.id.favoriteButton);
         }
 
     }
@@ -52,6 +60,21 @@ public class CustomeAdapter extends RecyclerView.Adapter<CustomeAdapter.MyViewHo
     //set the interface
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
+    }
+
+    //create the favorite click interface
+    public interface OnFavoriteClickListener {
+        void onFavoriteClick(Game game, boolean isFavorited);
+    }
+    //set the favorite interface
+    public void setOnFavoriteClickListener(OnFavoriteClickListener listener) {
+        this.favoriteListener = listener;
+    }
+
+    //method to update favorite status
+    public void setFavoritedGames(Set<String> favoritedGameIds) {
+        this.favoritedGameIds = favoritedGameIds;
+        notifyDataSetChanged();
     }
     @NonNull
     @Override
@@ -74,6 +97,28 @@ public class CustomeAdapter extends RecyclerView.Adapter<CustomeAdapter.MyViewHo
         Glide.with(holder.itemView.getContext())
                 .load(data.getImageUrl())
                         .into(holder.imageView);
+
+        // Set favorite button state
+        boolean isFavorited = favoritedGameIds.contains(data.getID());
+        holder.favoriteButton.setSelected(isFavorited);
+
+        // Handle favorite button click
+        holder.favoriteButton.setOnClickListener(v -> {
+            boolean newFavoriteState = !holder.favoriteButton.isSelected();
+            holder.favoriteButton.setSelected(newFavoriteState);
+
+            // Update local set
+            if (newFavoriteState) {
+                favoritedGameIds.add(data.getID());
+            } else {
+                favoritedGameIds.remove(data.getID());
+            }
+
+            // Notify listener
+            if (favoriteListener != null) {
+                favoriteListener.onFavoriteClick(data, newFavoriteState);
+            }
+        });
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
